@@ -1,10 +1,9 @@
-import {Builder, ThenableWebDriver, WebDriver} from 'selenium-webdriver';
+import {Builder, WebDriver} from 'selenium-webdriver';
 import {processConfig} from "./process-config";
 
 const SAUCELABS_SERVER_URL = 'ondemand.saucelabs.com:80/wd/hub';
 
 export function SaucelabsLauncher(args,
-                                sauceConnect,
                                 /* config.sauceLabs */ config,
                                 logger,
                                 baseLauncherDecorator,
@@ -17,8 +16,10 @@ export function SaucelabsLauncher(args,
   retryLauncherDecorator(this);
 
   const log = logger.create('SaucelabsLauncher');
-  const connectedDrivers: WebDriver[] = [];
   const {seleniumCapabilities, browserName, username, accessKey} = processConfig(config, args);
+
+  // Array of connected drivers. This is useful for quitting all connected drivers on kill.
+  let connectedDrivers: WebDriver[] = [];
 
   // Setup Browser name that will be printed out by Karma.
   this.name = browserName + ' on SauceLabs';
@@ -55,6 +56,10 @@ export function SaucelabsLauncher(args,
 
   this.on('kill', async (doneFn: () => void) => {
     await Promise.all(connectedDrivers.map(driver => driver.quit));
+
+    // Reset connected drivers in case the launcher will be reused.
+    connectedDrivers = [];
+
     doneFn();
   })
 }

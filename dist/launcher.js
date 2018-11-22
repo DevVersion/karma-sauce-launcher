@@ -11,15 +11,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const selenium_webdriver_1 = require("selenium-webdriver");
 const process_config_1 = require("./process-config");
 const SAUCELABS_SERVER_URL = 'ondemand.saucelabs.com:80/wd/hub';
-function SaucelabsLauncher(args, sauceConnect, 
+function SaucelabsLauncher(args, 
 /* config.sauceLabs */ config, logger, baseLauncherDecorator, captureTimeoutLauncherDecorator, retryLauncherDecorator) {
     // Apply base class mixins. This would be nice to have typed, but this is a low-priority now.
     baseLauncherDecorator(this);
     captureTimeoutLauncherDecorator(this);
     retryLauncherDecorator(this);
     const log = logger.create('SaucelabsLauncher');
-    const connectedDrivers = [];
     const { seleniumCapabilities, browserName, username, accessKey } = process_config_1.processConfig(config, args);
+    // Array of connected drivers. This is useful for quitting all connected drivers on kill.
+    let connectedDrivers = [];
     // Setup Browser name that will be printed out by Karma.
     this.name = browserName + ' on SauceLabs';
     // Listen for the start event from Karma. I know, the API is a bit different to how you
@@ -49,6 +50,8 @@ function SaucelabsLauncher(args, sauceConnect,
     }));
     this.on('kill', (doneFn) => __awaiter(this, void 0, void 0, function* () {
         yield Promise.all(connectedDrivers.map(driver => driver.quit));
+        // Reset connected drivers in case the launcher will be reused.
+        connectedDrivers = [];
         doneFn();
     }));
 }
