@@ -18,20 +18,24 @@ function SaucelabsLauncher(args, sauceConnect,
     captureTimeoutLauncherDecorator(this);
     retryLauncherDecorator(this);
     const log = logger.create('SaucelabsLauncher');
+    const connectedDrivers = [];
     const { seleniumCapabilities, browserName, username, accessKey } = process_config_1.processConfig(config, args);
     // Setup Browser name that will be printed out by Karma.
     this.name = browserName + ' on SauceLabs';
-    // See the following link for public API of the selenium server.
-    // https://wiki.saucelabs.com/display/DOCS/Instant+Selenium+Node.js+Tests
-    const driver = new selenium_webdriver_1.Builder()
-        .withCapabilities(seleniumCapabilities)
-        .usingServer(`http://${username}:${accessKey}@${SAUCELABS_SERVER_URL}`)
-        .build();
     // Listen for the start event from Karma. I know, the API is a bit different to how you
     // would expect, but we need to follow this approach unless we want to spend more work
     // improving type safety.
     this.on('start', (pageUrl) => __awaiter(this, void 0, void 0, function* () {
         try {
+            // See the following link for public API of the selenium server.
+            // https://wiki.saucelabs.com/display/DOCS/Instant+Selenium+Node.js+Tests
+            const driver = yield new selenium_webdriver_1.Builder()
+                .withCapabilities(seleniumCapabilities)
+                .usingServer(`http://${username}:${accessKey}@${SAUCELABS_SERVER_URL}`)
+                .build();
+            // Keep track of all connected drivers because it's possible that there are multiple
+            // driver instances (e.g. when running with concurrency)
+            connectedDrivers.push(driver);
             const session = yield driver.getSession();
             log.info('%s session at https://saucelabs.com/tests/%s', browserName, session.getId());
             log.info('Opening "%s" on the selenium client', pageUrl);
@@ -43,13 +47,10 @@ function SaucelabsLauncher(args, sauceConnect,
             this._done('failure');
         }
     }));
-    this.on('kill', (doneFn) => {
-        driver.quit().then(() => doneFn(), error => {
-            log.error('Could not kill the driver instance.');
-            log.error(error);
-        });
-    });
+    this.on('kill', (doneFn) => __awaiter(this, void 0, void 0, function* () {
+        yield Promise.all(connectedDrivers.map(driver => driver.quit));
+        doneFn();
+    }));
 }
 exports.SaucelabsLauncher = SaucelabsLauncher;
-;
 //# sourceMappingURL=launcher.js.map

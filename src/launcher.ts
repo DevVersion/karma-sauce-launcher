@@ -1,4 +1,4 @@
-import {Builder} from 'selenium-webdriver';
+import {Builder, ThenableWebDriver, WebDriver} from 'selenium-webdriver';
 import {processConfig} from "./process-config";
 
 const SAUCELABS_SERVER_URL = 'ondemand.saucelabs.com:80/wd/hub';
@@ -17,24 +17,28 @@ export function SaucelabsLauncher(args,
   retryLauncherDecorator(this);
 
   const log = logger.create('SaucelabsLauncher');
+  const connectedDrivers: WebDriver[] = [];
   const {seleniumCapabilities, browserName, username, accessKey} = processConfig(config, args);
 
   // Setup Browser name that will be printed out by Karma.
   this.name = browserName + ' on SauceLabs';
-
-  // See the following link for public API of the selenium server.
-  // https://wiki.saucelabs.com/display/DOCS/Instant+Selenium+Node.js+Tests
-  const driver = new Builder()
-    .withCapabilities(seleniumCapabilities)
-    .usingServer(`http://${username}:${accessKey}@${SAUCELABS_SERVER_URL}`)
-    .build();
-
 
   // Listen for the start event from Karma. I know, the API is a bit different to how you
   // would expect, but we need to follow this approach unless we want to spend more work
   // improving type safety.
   this.on('start', async (pageUrl: string) => {
     try {
+      // See the following link for public API of the selenium server.
+      // https://wiki.saucelabs.com/display/DOCS/Instant+Selenium+Node.js+Tests
+      const driver = await new Builder()
+        .withCapabilities(seleniumCapabilities)
+        .usingServer(`http://${username}:${accessKey}@${SAUCELABS_SERVER_URL}`)
+        .build();
+
+      // Keep track of all connected drivers because it's possible that there are multiple
+      // driver instances (e.g. when running with concurrency)
+      connectedDrivers.push(driver);
+
       const session = await driver.getSession();
 
       log.info('%s session at https://saucelabs.com/tests/%s', browserName, session.getId());
@@ -49,10 +53,8 @@ export function SaucelabsLauncher(args,
     }
   });
 
-  this.on('kill', (doneFn: () => void) => {
-    driver.quit().then(() => doneFn(), error => {
-      log.error('Could not kill the driver instance.');
-      log.error(error);
-    });
+  this.on('kill', async (doneFn: () => void) => {
+    await Promise.all(connectedDrivers.map(driver => driver.quit));
+    doneFn();
   })
-};
+}

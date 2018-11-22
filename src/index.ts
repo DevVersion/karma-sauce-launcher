@@ -1,5 +1,5 @@
 import {SaucelabsLauncher} from './launcher';
 
-export default {
+module.exports = {
   'launcher:SauceLabs': ['type', SaucelabsLauncher]
-}
+};
