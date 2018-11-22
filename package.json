@@ -5,6 +5,9 @@
   "main": "dist/index.js",
   "author": "Paul Gschwendtner",
   "license": "MIT",
+  "scripts": {
+    "build": "rm -rf dist/ && tsc -p src/"
+  },
   "devDependencies": {
     "@types/node": "^10.12.10",
     "typescript": "^3.1.6"
