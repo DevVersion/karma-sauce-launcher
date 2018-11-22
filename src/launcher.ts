@@ -55,7 +55,7 @@ export function SaucelabsLauncher(args,
   });
 
   this.on('kill', async (doneFn: () => void) => {
-    await Promise.all(connectedDrivers.map(driver => driver.quit));
+    await Promise.all(connectedDrivers.map(driver => driver.quit()));
 
     // Reset connected drivers in case the launcher will be reused.
     connectedDrivers = [];
