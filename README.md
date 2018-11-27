@@ -12,6 +12,7 @@ What is different?
   * Fixes https://github.com/karma-runner/karma-sauce-launcher/issues/136
   * Fixes https://github.com/karma-runner/karma-sauce-launcher/issues/91
   * **Note**: The heartbeat is not necessary because the `selenium-webdriver` times out automatically.
+* Simpler processing of browser arguments and configuration.
 * No longer includes unnecessary logic (for our Angular projects) where the Saucelabs tunnel can be established from the Karma launcher. 
   * This does not have any stability effect. Just reduces the magic and makes the code more simple and readable.
   
