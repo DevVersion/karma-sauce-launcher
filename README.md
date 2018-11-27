@@ -4,9 +4,9 @@ Rewrite of the official karma saucelabs launcher. The goal is a maintained, more
 What is different?
 
 * Uses the official Selenium webdriver implementation ([see here](https://github.com/SeleniumHQ/selenium/tree/master/javascript/node/selenium-webdriver))
-  * This is probably maintained more actively
-  * Probably runs more stable
-  * Doesn't have issues like: https://github.com/karma-runner/karma-sauce-launcher/issues/117
+  * Maintained by the official Selenium team
+  * More simple API wise, and probably also implementation-wise
+  * Doesn't cause issues like: https://github.com/karma-runner/karma-sauce-launcher/issues/117
 * No longer runs a heartbeat that could cause unexpected errors on Safari Mobile
   * Fixes https://github.com/karma-runner/karma-sauce-launcher/issues/42
   * Fixes https://github.com/karma-runner/karma-sauce-launcher/issues/136
