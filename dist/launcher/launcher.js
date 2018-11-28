@@ -9,16 +9,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const selenium_webdriver_1 = require("selenium-webdriver");
-const process_config_1 = require("./process-config");
-const SAUCELABS_SERVER_URL = 'ondemand.saucelabs.com:80/wd/hub';
+const process_config_1 = require("../process-config");
 function SaucelabsLauncher(args, 
-/* config.sauceLabs */ config, logger, baseLauncherDecorator, captureTimeoutLauncherDecorator, retryLauncherDecorator) {
+/* config.sauceLabs */ config, 
+/* SauceConnect */ sauceConnect, browserMap, logger, baseLauncherDecorator, captureTimeoutLauncherDecorator, retryLauncherDecorator) {
     // Apply base class mixins. This would be nice to have typed, but this is a low-priority now.
     baseLauncherDecorator(this);
     captureTimeoutLauncherDecorator(this);
     retryLauncherDecorator(this);
     const log = logger.create('SaucelabsLauncher');
-    const { seleniumCapabilities, browserName, username, accessKey } = process_config_1.processConfig(config, args);
+    const { startConnect, sauceConnectOptions, sauceApiProxy, seleniumHostUrl, seleniumCapabilities, browserName, username, accessKey } = process_config_1.processConfig(config, args);
     // Array of connected drivers. This is useful for quitting all connected drivers on kill.
     let connectedDrivers = [];
     // Setup Browser name that will be printed out by Karma.
@@ -27,19 +27,35 @@ function SaucelabsLauncher(args,
     // would expect, but we need to follow this approach unless we want to spend more work
     // improving type safety.
     this.on('start', (pageUrl) => __awaiter(this, void 0, void 0, function* () {
+        if (startConnect) {
+            try {
+                // In case the "startConnect" option has been enabled, establish a tunnel and wait
+                // for it being ready. In case a tunnel is already active, this will just continue
+                // without establishing a new one.
+                yield sauceConnect.establishTunnel(sauceConnectOptions);
+            }
+            catch (error) {
+                log.error(error);
+                this._done('failure');
+                return;
+            }
+        }
         try {
             // See the following link for public API of the selenium server.
             // https://wiki.saucelabs.com/display/DOCS/Instant+Selenium+Node.js+Tests
             const driver = yield new selenium_webdriver_1.Builder()
                 .withCapabilities(seleniumCapabilities)
-                .usingServer(`http://${username}:${accessKey}@${SAUCELABS_SERVER_URL}`)
+                .usingServer(`http://${username}:${accessKey}@${seleniumHostUrl}`)
                 .build();
             // Keep track of all connected drivers because it's possible that there are multiple
             // driver instances (e.g. when running with concurrency)
             connectedDrivers.push(driver);
-            const session = yield driver.getSession();
-            log.info('%s session at https://saucelabs.com/tests/%s', browserName, session.getId());
-            log.info('Opening "%s" on the selenium client', pageUrl);
+            const sessionId = (yield driver.getSession()).getId();
+            log.info('%s session at https://saucelabs.com/tests/%s', browserName, sessionId);
+            log.debug('Opening "%s" on the selenium client', pageUrl);
+            // Store the information about the current session in the browserMap. This is necessary
+            // because otherwise the Saucelabs reporter is not able to report results.
+            browserMap.set(this.id, { sessionId, username, accessKey, proxy: sauceApiProxy });
             yield driver.get(pageUrl);
         }
         catch (e) {
