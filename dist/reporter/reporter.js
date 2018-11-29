@@ -37,10 +37,11 @@ function SaucelabsReporter(logger, browserMap) {
         }
         const { sessionId } = browserData;
         // TODO: This would be nice to have typed. Not a priority right now, though.
-        const updateJob = util_1.promisify(new SaucelabsAPI({
+        const apiInstance = new SaucelabsAPI({
             username: browserData.username,
             password: browserData.accessKey,
-        }).updateJob);
+        });
+        const updateJob = util_1.promisify(apiInstance.updateJob.bind(apiInstance));
         const hasPassed = !(result.failed || result.error || result.disconnected);
         // Update the job by reporting the test results. Also we need to store the promise here
         // because in case "onExit" is being called, we want to wait for the API calls to finish.
